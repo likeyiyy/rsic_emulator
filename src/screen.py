@@ -54,7 +54,6 @@ class Screen(object):
             for y in range(0, SCREEN_HEIGHT):
                 for x in range(0, SCREEN_WIDTH):
                     ascii_code = buffers[(y * SCREEN_WIDTH) + x]
-                    if ascii_code == 0:
-                        ascii_code = 32
-                    self.stdscr.addch(self.init_y + y, self.init_x + x, chr(ascii_code))
+                    if ascii_code != 0:
+                        self.stdscr.addch(self.init_y + y, self.init_x + x, chr(ascii_code))
             self.stdscr.refresh()
