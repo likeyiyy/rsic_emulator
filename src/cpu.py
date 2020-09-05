@@ -90,12 +90,10 @@ class CPU(object):
             if intrrupt_flag:
                 ascii_code = self.read_keyboard()
                 self.memory.write8(SCREEN_MMAP_ADDR + (y * SCREEN_WIDTH) + x, ascii_code)
-                buffers = self.get_screen_memory()
-                print(buffers[0:10])
                 x += 1
-                if x > SCREEN_WIDTH:
+                if x >= SCREEN_WIDTH:
                     x = 0
                     y += 1
-                    if y > SCREEN_HEIGHT:
-                        y = 1
+                    if y >= SCREEN_HEIGHT:
+                        y = 0
                 self.cli()

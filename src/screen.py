@@ -46,7 +46,7 @@ class Screen(object):
         self.get_memory = get_memory
 
     def run(self):
-        self.stdscr.addstr(1, 0, "显示器始化好了！")
+        self.stdscr.addstr(0, 20, "显示器始化好了！")
         assert self.get_memory is not None
         while True:
             time.sleep(1.0 / SCREEN_REFRESH_FREQ)
@@ -57,3 +57,4 @@ class Screen(object):
                     if ascii_code == 0:
                         ascii_code = 32
                     self.stdscr.addch(self.init_y + y, self.init_x + x, chr(ascii_code))
+            self.stdscr.refresh()
