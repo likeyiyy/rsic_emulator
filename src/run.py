@@ -26,6 +26,7 @@
 from __future__ import absolute_import, annotations, print_function
 from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
+from src.constants import DEFAULT_MEMORY_SIZE
 from src.cpu import CPU
 from src.keyboards import KeyBoard
 from src.memory import Memory
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     stdscr.keypad(True)
 
     # 内存初始化
-    memory = Memory(16)  # 16MB
+    memory = Memory(DEFAULT_MEMORY_SIZE)  # 16MB
 
     # 键盘初始化
     keyboard = KeyBoard(stdscr)
