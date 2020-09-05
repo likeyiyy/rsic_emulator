@@ -25,14 +25,11 @@
 
 from __future__ import absolute_import, annotations, print_function
 
-import time
-
+from src.constants import KEY_MMAP_ADDR, KEY_BOARD_INT_NUM, SCREEN_MMAP_ADDR
 from src.keyboards import KeyBoard
 from src.memory import Memory
 from src.screen import Screen
-
-KEY_BOARD_INT_NUM = 16
-KEY_MMAP_ADDR = 0xb8d70
+from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 
 class CPU(object):
@@ -54,6 +51,16 @@ class CPU(object):
         """
         self.memory.write8(KEY_MMAP_ADDR, key_code)
 
+    def read_keyboard(self):
+        return self.memory.read8(KEY_MMAP_ADDR)
+
+    def get_screen_memory(self):
+        result = []
+        for y in range(0, SCREEN_HEIGHT):
+            for x in range(0, SCREEN_WIDTH):
+                result.append(self.memory.read8(SCREEN_MMAP_ADDR + (y * SCREEN_WIDTH) + x))
+        return result
+
     def set_keyboard_interrupt_flag(self):
         self.PSW |= 0b100 # 设置中断标志
         low_16_bit = self.PSW & 0xffff  # 设置中断号
@@ -68,12 +75,25 @@ class CPU(object):
 
     def attach_screen(self, screen: Screen):
         self.screen = screen
+        self.screen.init_get_memory_handler(self.get_screen_memory)
+        return self.screen
+
+    def cli(self):
+        low_2_bit = self.PSW & 0b11
+        self.PSW = ((self.PSW >> 3) << 3) | low_2_bit
 
     def run(self):
-        print("CPU RUNNING")
+        y = 0
+        x = 0
         while True:
             intrrupt_flag = (self.PSW & 0b100) >> 2
             if intrrupt_flag:
-                print(self.memory.read8(KEY_MMAP_ADDR))
-                low_2_bit = self.PSW & 0b11
-                self.PSW = ((self.PSW >> 3) << 3) | low_2_bit
+                ascii_code = self.read_keyboard()
+                self.memory.write8(SCREEN_MMAP_ADDR + (y * SCREEN_WIDTH) + x, ascii_code)
+                x += 1
+                if x > SCREEN_WIDTH:
+                    x = 0
+                    y += 1
+                    if y > SCREEN_HEIGHT:
+                        y = 1
+                self.cli()

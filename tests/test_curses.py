@@ -24,38 +24,30 @@
 #            └──┴──┘       └──┴──┘
 
 from __future__ import absolute_import, annotations, print_function
+from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
-import typing
+import curses
+from curses.textpad import Textbox, rectangle
 
 
-class KeyBoard(object):
-
-    def __init__(self, stdscr):
-        self.stdscr = stdscr
-        self.set_memory = None
-        self.set_cpu_interrupt_flag = None
-
-    def init_set_memory_handler(self, set_memory: typing.Callable):
-        self.set_memory = set_memory
-
-    def init_set_cpu_interrupt_flag(self, set_cpu_interrupt_flag: typing.Callable):
-        self.set_cpu_interrupt_flag = set_cpu_interrupt_flag
-
-    def on_press(self, key):
-        assert self.set_memory is not None, "Memory 没有初始化"
-        assert self.set_cpu_interrupt_flag is not None, "CPU没有初始化"
-        self.set_memory(key)
-        self.set_cpu_interrupt_flag()
-
-    def run(self):
-        self.stdscr.addstr(0, 0, "键盘初始化好了！")
-        while True:
-            key_code = self.stdscr.getch()
-            self.on_press(key_code)
+def main():
+    import curses
+    stdscr = curses.initscr()
+    curses.noecho()
+    stdscr.addstr(0, 0, "CPU, 键盘，显示缓存，都初始化好了")
+    rectangle(stdscr, uly=1, ulx=0, lry=1 + 25 + 1, lrx=1 + 80 + 1)
+    stdscr.refresh()
+    y = 2
+    x = 1
+    while True:
+        key_code = stdscr.getch()
+        stdscr.addch(y, x, key_code)
+        x += 1
+        if x > 80:
+            x = x % 80
+            y += 1
 
 
 if __name__ == "__main__":
-    import curses
-    stdscr = curses.initscr()
-    keyboard_ins = KeyBoard(stdscr)
-    keyboard_ins.run()
+
+    main()

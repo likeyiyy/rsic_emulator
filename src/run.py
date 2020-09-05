@@ -31,17 +31,37 @@ from src.keyboards import KeyBoard
 from src.memory import Memory
 import time, threading
 
+from src.screen import Screen
+
 if __name__ == "__main__":
+    import curses
+    stdscr = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(True)
+
+    # 内存初始化
     memory = Memory(16)  # 16MB
-    keyboard = KeyBoard()
+
+    # 键盘初始化
+    keyboard = KeyBoard(stdscr)
+
+    # 显示器初始化
+    screen = Screen(stdscr)
+
     cpu = CPU()
 
     cpu.attach_memory(memory)
     cpu.attach_keyboard(keyboard)
-    t = threading.Thread(target=keyboard.run, name='LoopThread')
-    t.start()
+    cpu.attach_screen(screen)
+
+    keyboard_thread = threading.Thread(target=keyboard.run, name='KeyBoard-LoopThread')
+    screen_thread = threading.Thread(target=screen.run, name='Screen-LoopThread')
+    keyboard_thread.start()
+    screen_thread.start()
     cpu.run()
-    t.join()
+    screen_thread.join()
+    keyboard_thread.join()
 
 
 
