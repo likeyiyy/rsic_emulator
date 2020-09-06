@@ -121,10 +121,10 @@ class CPU(object):
         while True:
             instruction = self.fetch()
             op_code = instruction >> 24
-            RS_INDEX = (instruction & 0x0fffffff) >> 19
-            RT_INDEX = (instruction & 0x07ffffff) >> 14
-            RD_INDEX = (instruction & 0x003fffff) >> 9
-            JUMP_LABEL = instruction & 0b11_1111_1111_1111
+            RS_INDEX = (instruction & 0x00ff_ffff) >> 19
+            RT_INDEX = (instruction & 0x007f_ffff) >> 14
+            RD_INDEX = (instruction & 0x0003_ffff) >> 9
+            JUMP_LABEL = instruction & 0x0000_3fff
 
             if op_code in (OPCode.ADD, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] + self.regs[RT_INDEX]
@@ -201,7 +201,7 @@ class CPU(object):
                 self.PC = self.regs[RS_INDEX]
 
             elif op_code == OPCode.CALLI:
-                CALL_LABEL = instruction & 0x0fffffff
+                CALL_LABEL = instruction & 0x00ff_ffff
                 self.SP -= 4
                 self.memory.write32(self.SP, self.PC)
                 self.PC = CALL_LABEL

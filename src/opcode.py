@@ -1,4 +1,7 @@
-class OPCode(object):
+import enum
+
+
+class OPCode(int, enum.Enum):
     # 算术运算指令
     ADD = 0
     SUB = 1
