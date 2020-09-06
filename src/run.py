@@ -28,6 +28,7 @@ from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
 from src.constants import DEFAULT_MEMORY_SIZE
 from src.cpu import CPU
+from src.debug_display import DebugDisplay
 from src.keyboards import KeyBoard
 from src.memory import Memory
 import time, threading
@@ -50,7 +51,11 @@ if __name__ == "__main__":
     # 显示器初始化
     screen = Screen(stdscr)
 
+    # CPU初始化
     cpu = CPU()
+
+    # 调试窗口初始化
+    debug_display = DebugDisplay(stdscr, cpu)
 
     cpu.attach_memory(memory)
     cpu.attach_keyboard(keyboard)
@@ -58,11 +63,15 @@ if __name__ == "__main__":
 
     keyboard_thread = threading.Thread(target=keyboard.run, name='KeyBoard-LoopThread')
     screen_thread = threading.Thread(target=screen.run, name='Screen-LoopThread')
+    debug_display_thread = threading.Thread(target=debug_display.run, name='debug_display-LoopThread')
+
     keyboard_thread.start()
     screen_thread.start()
+    debug_display_thread.start()
     cpu.run()
     screen_thread.join()
     keyboard_thread.join()
+    debug_display_thread.join()
 
 
 

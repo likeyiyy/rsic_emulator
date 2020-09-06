@@ -51,9 +51,10 @@ class CPU(object):
         self.keyboard = None
         self.screen = None
 
-
     def attach_memory(self, memory: Memory):
         self.memory = memory
+        self.SP = self.memory.size - 4
+        self.BP = self.SP
 
     def set_keyboard_memory(self, key_code: int):
         """
@@ -125,16 +126,24 @@ class CPU(object):
             RD_INDEX = (instruction & 0x003fffff) >> 9
             JUMP_LABEL = instruction & 0b11_1111_1111_1111
 
-            if op_code in (OPCode.ADD, OPCode.FADD):
+            if op_code in (OPCode.ADD, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] + self.regs[RT_INDEX]
-            elif op_code in (OPCode.SUB, OPCode.FSUB):
+            elif op_code in (OPCode.SUB, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] - self.regs[RT_INDEX]
-            elif op_code in (OPCode.MUL, OPCode.FMUL):
+            elif op_code in (OPCode.MUL, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] * self.regs[RT_INDEX]
-            elif op_code in (OPCode.DIV, OPCode.FDIV):
+            elif op_code in (OPCode.DIV, ):
                 self.regs[RD_INDEX] = int(self.regs[RS_INDEX] / self.regs[RT_INDEX])
             elif op_code == OPCode.MOD:
                 _, self.regs[RD_INDEX] = divmod(self.regs[RS_INDEX], self.regs[RT_INDEX])
+            elif op_code in (OPCode.ADD, OPCode.FADD):
+                self.f_regs[RD_INDEX] = self.f_regs[RS_INDEX] + self.f_regs[RT_INDEX]
+            elif op_code in (OPCode.SUB, OPCode.FSUB):
+                self.f_regs[RD_INDEX] = self.f_regs[RS_INDEX] - self.f_regs[RT_INDEX]
+            elif op_code in (OPCode.MUL, OPCode.FMUL):
+                self.f_regs[RD_INDEX] = self.f_regs[RS_INDEX] * self.f_regs[RT_INDEX]
+            elif op_code in (OPCode.DIV, OPCode.FDIV):
+                self.f_regs[RD_INDEX] = int(self.f_regs[RS_INDEX] / self.f_regs[RT_INDEX])
 
             elif op_code == OPCode.AND:
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] & self.regs[RT_INDEX]

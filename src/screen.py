@@ -29,14 +29,14 @@ import time
 from curses.textpad import rectangle
 from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
-from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_REFRESH_FREQ
+from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_REFRESH_FREQ, SCREEN_START_Y, SCREEN_START_X
 
 
 class Screen(object):
 
     def __init__(self, stdscr):
         self.stdscr = stdscr
-        rectangle(stdscr, uly=1, ulx=0, lry=1 + SCREEN_HEIGHT + 1, lrx=1 + SCREEN_WIDTH + 1)
+        rectangle(stdscr, uly=SCREEN_START_Y, ulx=SCREEN_START_X, lry=SCREEN_START_Y + SCREEN_HEIGHT + 1, lrx=SCREEN_START_X + SCREEN_WIDTH + 1)
         stdscr.refresh()
         self.init_y = 2
         self.init_x = 1
