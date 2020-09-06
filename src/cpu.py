@@ -122,12 +122,15 @@ class CPU(object):
             instruction = self.fetch()
             op_code = instruction >> 24
             RS_INDEX = (instruction & 0x00ff_ffff) >> 19
-            RT_INDEX = (instruction & 0x007f_ffff) >> 14
-            RD_INDEX = (instruction & 0x0003_ffff) >> 9
+            RT_INDEX = (instruction & 0x0007_ffff) >> 14
+            RD_INDEX = (instruction & 0x0000_3fff) >> 9
             JUMP_LABEL = instruction & 0x0000_3fff
 
             if op_code in (OPCode.ADD, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] + self.regs[RT_INDEX]
+            elif op_code in (OPCode.ADDI, ):
+                imm = instruction & 0x0007_ffff
+                self.regs[RS_INDEX] = self.regs[RS_INDEX] + imm
             elif op_code in (OPCode.SUB, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] - self.regs[RT_INDEX]
             elif op_code in (OPCode.MUL, ):
@@ -149,13 +152,14 @@ class CPU(object):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] & self.regs[RT_INDEX]
             elif op_code == OPCode.OR:
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] | self.regs[RT_INDEX]
+            elif op_code == OPCode.XOR:
+                self.regs[RD_INDEX] = self.regs[RS_INDEX] ^ self.regs[RT_INDEX]
             elif op_code == OPCode.NOT:
                 self.regs[RT_INDEX] = ~self.regs[RS_INDEX]
             elif op_code == OPCode.SLL:
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] << self.regs[RT_INDEX]
             elif op_code == OPCode.SLR:
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] >> self.regs[RT_INDEX]
-
             elif op_code == OPCode.LT:
                 if self.regs[RS_INDEX] < self.regs[RT_INDEX]:
                     self.PC = JUMP_LABEL
@@ -165,26 +169,19 @@ class CPU(object):
             elif op_code == OPCode.LTE:
                 if self.regs[RS_INDEX] <= self.regs[RT_INDEX]:
                     self.PC = JUMP_LABEL
-
             elif op_code == OPCode.GTE:
                 if self.regs[RS_INDEX] >= self.regs[RT_INDEX]:
                     self.PC = JUMP_LABEL
-
             elif op_code == OPCode.EQ:
                 if self.regs[RS_INDEX] == self.regs[RT_INDEX]:
                     self.PC = JUMP_LABEL
-
             elif op_code == OPCode.NEQ:
                 if self.regs[RS_INDEX] != self.regs[RT_INDEX]:
                     self.PC = JUMP_LABEL
-
             elif op_code == OPCode.JMP:
                 self.PC = self.regs[RS_INDEX]
-
             elif op_code == OPCode.JMPI:
-                JMPI_LABEL = instruction & 0x0fffffff
-                self.PC = JMPI_LABEL
-
+                self.PC = instruction & 0x00ff_ffff
             elif op_code == OPCode.MOV:
                 self.regs[RT_INDEX] = self.regs[RS_INDEX]
             elif op_code == OPCode.LOAD:
@@ -194,45 +191,36 @@ class CPU(object):
             elif op_code == OPCode.LUI:
                 imm_num = instruction & 0xffff
                 self.regs[RS_INDEX] = imm_num
-
             elif op_code == OPCode.CALL:
                 self.SP -= 4
                 self.memory.write32(self.SP, self.PC)
                 self.PC = self.regs[RS_INDEX]
-
             elif op_code == OPCode.CALLI:
-                CALL_LABEL = instruction & 0x00ff_ffff
                 self.SP -= 4
                 self.memory.write32(self.SP, self.PC)
-                self.PC = CALL_LABEL
-
+                self.PC = instruction & 0x00ff_ffff
             elif op_code == OPCode.RET:
                 self.PC = self.memory.read32(self.SP)
                 self.SP += 4
-
             elif op_code == OPCode.PUSH:
                 self.SP -= 4
                 self.memory.write32(self.SP, self.regs[RS_INDEX])
-
             elif op_code == OPCode.PUSH:
                 self.regs[RS_INDEX] = self.memory.read32(self.SP)
                 self.SP += 4
-
             elif op_code == OPCode.INT:
                 int_num = instruction & 0xff
                 self.enter_interrupt(int_num=int_num)
                 self.PSW &= ~0b00  # 不再允许中断和单步调试
-
+            elif op_code == OPCode.HALT:
+                self.PC = self.PC - 4
             elif op_code == OPCode.IRET:
                 self.PC = self.memory.read32(self.SP)
                 self.SP += 4
                 self.PSW = self.memory.read32(self.SP)
                 self.SP += 4
-
             elif op_code == OPCode.LIDT:
-                IDT_LABEL = instruction & 0x0fffffff
-                self.IDTR = IDT_LABEL
-
+                self.IDTR = instruction & 0x00ff_ffff
             elif op_code == OPCode.LCR:
                 cr_num = RT_INDEX
                 if cr_num == 0:
@@ -250,7 +238,7 @@ class CPU(object):
             elif op_code == OPCode.STI:
                 self.PSW |= 0b10
             elif op_code == OPCode.CLI:
-                self.PSW &= 0xfffffffd
+                self.PSW &= 0xffff_fffd
 
             enable_interrupt = (self.PSW & 0b10) >> 1
             if enable_interrupt:

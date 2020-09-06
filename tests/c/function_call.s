@@ -11,10 +11,15 @@ mul:
 	.cfi_offset 6, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
-	movl	%edi, -4(%rbp)
-	movl	%esi, -8(%rbp)
-	movl	-4(%rbp), %eax
-	imull	-8(%rbp), %eax
+	movl	%edi, -20(%rbp)
+	movl	%esi, -24(%rbp)
+	movl	$10, -8(%rbp)
+	movl	-8(%rbp), %eax
+	addl	$25, %eax
+	movl	%eax, -4(%rbp)
+	movl	-20(%rbp), %eax
+	imull	-24(%rbp), %eax
+	imull	-4(%rbp), %eax
 	popq	%rbp
 	.cfi_def_cfa 7, 8
 	ret

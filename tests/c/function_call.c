@@ -1,7 +1,9 @@
 #include "stdio.h"
 
 int mul(int a, int b) {
-    return a * b;
+    int c = 10;
+    int d = c + 25;
+    return a * b * d;
 }
 
 int add(int a, int b) {

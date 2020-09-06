@@ -49,3 +49,7 @@ class OPCode(int, enum.Enum):
     LCR = 35
     STI = 36
     CLI = 37
+
+    # 补充指令
+    XOR = 38
+    ADDI = 39

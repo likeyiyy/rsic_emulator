@@ -28,7 +28,7 @@ from __future__ import absolute_import, annotations, print_function
 import unittest
 from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
-from src.asm.objdump import ObjDumper
+from src.asm.objdump import InsDumper
 
 
 class TestObjDump(unittest.TestCase):
@@ -46,13 +46,13 @@ class TestObjDump(unittest.TestCase):
             0b00011111_00000_00000_00000_000000000,  # int 31
             0b00100011_00000_00000_00000_000000000,  # lcr 35
         ]
-        self.assertEqual(ObjDumper.dis_assembly(ins[0]), "ADD R0, R0, R0")
-        self.assertEqual(ObjDumper.dis_assembly(ins[1]), "SUB R0, R0, R0")
-        self.assertEqual(ObjDumper.dis_assembly(ins[2]), "NOT R0, R0")
-        self.assertEqual(ObjDumper.dis_assembly(ins[3]), "LT R0, R0, 0x00000000")
-        self.assertEqual(ObjDumper.dis_assembly(ins[4]), "JMP R0")
-        self.assertEqual(ObjDumper.dis_assembly(ins[5]), "RET")
-        self.assertEqual(ObjDumper.dis_assembly(ins[6]), "CALLI 0x00000000")
-        self.assertEqual(ObjDumper.dis_assembly(ins[7]), "LUI R0, 0x0000")
-        self.assertEqual(ObjDumper.dis_assembly(ins[8]), "INT 0")
-        self.assertEqual(ObjDumper.dis_assembly(ins[9]), "LCR R0, CR0")
+        self.assertEqual(InsDumper.dis_assembly(ins[0]), "ADD R0, R0, R0")
+        self.assertEqual(InsDumper.dis_assembly(ins[1]), "SUB R0, R0, R0")
+        self.assertEqual(InsDumper.dis_assembly(ins[2]), "NOT R0, R0")
+        self.assertEqual(InsDumper.dis_assembly(ins[3]), "LT R0, R0, 0x00000000")
+        self.assertEqual(InsDumper.dis_assembly(ins[4]), "JMP R0")
+        self.assertEqual(InsDumper.dis_assembly(ins[5]), "RET")
+        self.assertEqual(InsDumper.dis_assembly(ins[6]), "CALLI 0x00000000")
+        self.assertEqual(InsDumper.dis_assembly(ins[7]), "LUI R0, 0x0000")
+        self.assertEqual(InsDumper.dis_assembly(ins[8]), "INT 0")
+        self.assertEqual(InsDumper.dis_assembly(ins[9]), "LCR R0, CR0")

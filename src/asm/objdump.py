@@ -24,7 +24,6 @@
 #            └──┴──┘       └──┴──┘
 
 from __future__ import absolute_import, annotations, print_function
-from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
 from src.opcode import OPCode
 
@@ -82,7 +81,7 @@ no_reg_with_label = (
 )
 
 
-class ObjDumper(object):
+class InsDumper(object):
 
     @classmethod
     def dis_assembly(cls, instruction: int):
