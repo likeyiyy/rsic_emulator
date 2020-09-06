@@ -43,6 +43,7 @@ class CPU(object):
         self.IDTR = 0x0
         self.CR3 = 0x0
         self.CR2 = 0x0
+        self.CR1 = 0x0
         self.CR0 = 0x0
         self.regs = [0] * 32
         self.f_regs = [0.0] * 4
@@ -106,34 +107,145 @@ class CPU(object):
             self.PC += 4
             return instruction
 
+    def enter_interrupt(self, int_num: int):
+        # push PWS
+        self.SP -= 4
+        self.memory.write32(self.SP, self.PSW)
+        # push pc
+        self.SP -= 4
+        self.memory.write32(self.SP, self.PC)
+        self.PC = self.IDTR + int_num * 4
+
     def run(self):
-        y = 0
-        x = 0
         while True:
             instruction = self.fetch()
             op_code = instruction >> 24
             RS_INDEX = (instruction & 0x0fffffff) >> 19
             RT_INDEX = (instruction & 0x07ffffff) >> 14
             RD_INDEX = (instruction & 0x003fffff) >> 9
-            if op_code == OPCode.ADD:
+            JUMP_LABEL = instruction & 0b11_1111_1111_1111
+
+            if op_code in (OPCode.ADD, OPCode.FADD):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] + self.regs[RT_INDEX]
-            elif op_code == OPCode.SUB:
+            elif op_code in (OPCode.SUB, OPCode.FSUB):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] - self.regs[RT_INDEX]
-            elif op_code == OPCode.MUL:
+            elif op_code in (OPCode.MUL, OPCode.FMUL):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] * self.regs[RT_INDEX]
-            elif op_code == OPCode.DIV:
+            elif op_code in (OPCode.DIV, OPCode.FDIV):
                 self.regs[RD_INDEX] = int(self.regs[RS_INDEX] / self.regs[RT_INDEX])
-            elif op_code == OPCode.DIV:
+            elif op_code == OPCode.MOD:
                 _, self.regs[RD_INDEX] = divmod(self.regs[RS_INDEX], self.regs[RT_INDEX])
 
-            intrrupt_flag = (self.PSW & 0b100) >> 2
-            if intrrupt_flag:
-                ascii_code = self.read_keyboard()
-                self.memory.write8(SCREEN_MMAP_ADDR + (y * SCREEN_WIDTH) + x, ascii_code)
-                x += 1
-                if x >= SCREEN_WIDTH:
-                    x = 0
-                    y += 1
-                    if y >= SCREEN_HEIGHT:
-                        y = 0
-                self.cli()
+            elif op_code == OPCode.AND:
+                self.regs[RD_INDEX] = self.regs[RS_INDEX] & self.regs[RT_INDEX]
+            elif op_code == OPCode.OR:
+                self.regs[RD_INDEX] = self.regs[RS_INDEX] | self.regs[RT_INDEX]
+            elif op_code == OPCode.NOT:
+                self.regs[RT_INDEX] = ~self.regs[RS_INDEX]
+            elif op_code == OPCode.SLL:
+                self.regs[RD_INDEX] = self.regs[RS_INDEX] << self.regs[RT_INDEX]
+            elif op_code == OPCode.SLR:
+                self.regs[RD_INDEX] = self.regs[RS_INDEX] >> self.regs[RT_INDEX]
+
+            elif op_code == OPCode.LT:
+                if self.regs[RS_INDEX] < self.regs[RT_INDEX]:
+                    self.PC = JUMP_LABEL
+            elif op_code == OPCode.GT:
+                if self.regs[RS_INDEX] > self.regs[RT_INDEX]:
+                    self.PC = JUMP_LABEL
+            elif op_code == OPCode.LTE:
+                if self.regs[RS_INDEX] <= self.regs[RT_INDEX]:
+                    self.PC = JUMP_LABEL
+
+            elif op_code == OPCode.GTE:
+                if self.regs[RS_INDEX] >= self.regs[RT_INDEX]:
+                    self.PC = JUMP_LABEL
+
+            elif op_code == OPCode.EQ:
+                if self.regs[RS_INDEX] == self.regs[RT_INDEX]:
+                    self.PC = JUMP_LABEL
+
+            elif op_code == OPCode.NEQ:
+                if self.regs[RS_INDEX] != self.regs[RT_INDEX]:
+                    self.PC = JUMP_LABEL
+
+            elif op_code == OPCode.JMP:
+                self.PC = self.regs[RS_INDEX]
+
+            elif op_code == OPCode.JMPI:
+                JMPI_LABEL = instruction & 0x0fffffff
+                self.PC = JMPI_LABEL
+
+            elif op_code == OPCode.MOV:
+                self.regs[RT_INDEX] = self.regs[RS_INDEX]
+            elif op_code == OPCode.LOAD:
+                self.regs[RT_INDEX] = self.memory.read8(self.regs[RS_INDEX])
+            elif op_code == OPCode.STORE:
+                self.memory.write8(self.regs[RT_INDEX], self.regs[RS_INDEX])
+            elif op_code == OPCode.LUI:
+                imm_num = instruction & 0xffff
+                self.regs[RS_INDEX] = imm_num
+
+            elif op_code == OPCode.CALL:
+                self.SP -= 4
+                self.memory.write32(self.SP, self.PC)
+                self.PC = self.regs[RS_INDEX]
+
+            elif op_code == OPCode.CALLI:
+                CALL_LABEL = instruction & 0x0fffffff
+                self.SP -= 4
+                self.memory.write32(self.SP, self.PC)
+                self.PC = CALL_LABEL
+
+            elif op_code == OPCode.RET:
+                self.PC = self.memory.read32(self.SP)
+                self.SP += 4
+
+            elif op_code == OPCode.PUSH:
+                self.SP -= 4
+                self.memory.write32(self.SP, self.regs[RS_INDEX])
+
+            elif op_code == OPCode.PUSH:
+                self.regs[RS_INDEX] = self.memory.read32(self.SP)
+                self.SP += 4
+
+            elif op_code == OPCode.INT:
+                int_num = instruction & 0xff
+                self.enter_interrupt(int_num=int_num)
+                self.PSW &= ~0b00  # 不再允许中断和单步调试
+
+            elif op_code == OPCode.IRET:
+                self.PC = self.memory.read32(self.SP)
+                self.SP += 4
+                self.PSW = self.memory.read32(self.SP)
+                self.SP += 4
+
+            elif op_code == OPCode.LIDT:
+                IDT_LABEL = instruction & 0x0fffffff
+                self.IDTR = IDT_LABEL
+
+            elif op_code == OPCode.LCR:
+                cr_num = RT_INDEX
+                if cr_num == 0:
+                    self.CR0 = self.regs[RS_INDEX]
+                elif cr_num == 1:
+                    self.CR1 = self.regs[RS_INDEX]
+                elif cr_num == 2:
+                    self.CR2 = self.regs[RS_INDEX]
+                elif cr_num == 3:
+                    self.CR3 = self.regs[RS_INDEX]
+                else:
+                    # 触发中断
+                    pass
+
+            elif op_code == OPCode.STI:
+                self.PSW |= 0b10
+            elif op_code == OPCode.CLI:
+                self.PSW &= 0xfffffffd
+
+            enable_interrupt = self.PSW & 0b10 >> 1
+            if enable_interrupt:
+                interrupt_flag = (self.PSW & 0b100) >> 2
+                if interrupt_flag:
+                    int_num = (self.PSW >> 16) & 0xff
+                    self.enter_interrupt(int_num=int_num)
