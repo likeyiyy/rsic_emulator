@@ -30,7 +30,8 @@ from curses.textpad import rectangle
 from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
 from src.constants import REG_SCREEN_HEIGHT, REG_SCREEN_WIDTH, REG_SCREEN_START_Y, REG_SCREEN_START_X, \
-    SCREEN_REFRESH_FREQ, STACK_SCREEN_START_Y, STACK_SCREEN_START_X, STACK_SCREEN_HEIGHT, STACK_SCREEN_WIDTH
+    SCREEN_REFRESH_FREQ, STACK_SCREEN_START_Y, STACK_SCREEN_START_X, STACK_SCREEN_HEIGHT, STACK_SCREEN_WIDTH, \
+    CODE_SCREEN_START_Y, CODE_SCREEN_START_X, CODE_SCREEN_HEIGHT, CODE_SCREEN_WIDTH
 
 
 class DebugDisplay(object):
@@ -43,6 +44,7 @@ class DebugDisplay(object):
         self.cpu_ins = cpu_ins
         rectangle(stdscr, uly=REG_SCREEN_START_Y, ulx=REG_SCREEN_START_X, lry=REG_SCREEN_START_Y + REG_SCREEN_HEIGHT + 1, lrx=REG_SCREEN_START_X + REG_SCREEN_WIDTH + 2)
         rectangle(stdscr, uly=STACK_SCREEN_START_Y, ulx=STACK_SCREEN_START_X, lry=STACK_SCREEN_START_Y + STACK_SCREEN_HEIGHT + 1, lrx=STACK_SCREEN_START_X + STACK_SCREEN_WIDTH + 2)
+        rectangle(stdscr, uly=CODE_SCREEN_START_Y, ulx=CODE_SCREEN_START_X, lry=CODE_SCREEN_START_Y + CODE_SCREEN_HEIGHT + 1, lrx=CODE_SCREEN_START_X + CODE_SCREEN_WIDTH + 2)
 
     def display_regs(self):
         for i in range(32):
@@ -75,6 +77,9 @@ class DebugDisplay(object):
             else:
                 prefix = ' '
             self.stdscr.addstr(STACK_SCREEN_START_Y + i + 5 + 1, STACK_SCREEN_START_X + 1, "%s 0x%08x:  0x%08x" % (prefix, sp - 4 * i, self.cpu_ins.memory.read32(addr)))
+
+    def display_code(self):
+        pass
 
     def run(self):
         self.stdscr.addstr(0, 30, "调试显示器始化好了！")
