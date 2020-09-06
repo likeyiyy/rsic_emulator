@@ -39,7 +39,7 @@ class CPU(object):
         self.PC = 0x7C00
         self.BP = 0x0
         self.SP = 0x0
-        self.PSW = 0
+        self.PSW = 0b10  # 默认允许中断
         self.IDTR = 0x0
         self.CR3 = 0x0
         self.CR2 = 0x0
@@ -252,9 +252,10 @@ class CPU(object):
             elif op_code == OPCode.CLI:
                 self.PSW &= 0xfffffffd
 
-            enable_interrupt = self.PSW & 0b10 >> 1
+            enable_interrupt = (self.PSW & 0b10) >> 1
             if enable_interrupt:
                 interrupt_flag = (self.PSW & 0b100) >> 2
                 if interrupt_flag:
+                    self.cli()
                     int_num = (self.PSW >> 16) & 0xff
                     self.enter_interrupt(int_num=int_num)
