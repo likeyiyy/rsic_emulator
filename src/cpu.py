@@ -239,6 +239,8 @@ class CPU(object):
                 self.PSW |= 0b10
             elif op_code == OPCode.CLI:
                 self.PSW &= 0xffff_fffd
+            elif op_code == OPCode.NOP:
+                pass # do nothing
 
             enable_interrupt = (self.PSW & 0b10) >> 1
             if enable_interrupt:

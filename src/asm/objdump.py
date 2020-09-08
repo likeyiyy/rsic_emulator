@@ -25,60 +25,8 @@
 
 from __future__ import absolute_import, annotations, print_function
 
-from src.opcode import OPCode
-
-three_reg_opcodes = (
-    OPCode.ADD,
-    OPCode.SUB,
-    OPCode.MUL,
-    OPCode.DIV,
-    OPCode.MOD,
-    OPCode.FADD,
-    OPCode.FSUB,
-    OPCode.FMUL,
-    OPCode.FDIV,
-    OPCode.AND,
-    OPCode.OR,
-)
-
-two_reg_with_reversed = (
-    OPCode.NOT,
-    OPCode.SLL,
-    OPCode.SLR,
-    OPCode.MOV,
-    OPCode.LOAD,
-    OPCode.STORE,
-)
-
-two_reg_with_label = (
-    OPCode.LT,
-    OPCode.GT,
-    OPCode.LTE,
-    OPCode.GTE,
-    OPCode.EQ,
-    OPCode.NEQ,
-)
-
-single_reg_with_reversed = (
-    OPCode.JMP,
-    OPCode.CALL,
-    OPCode.PUSH,
-    OPCode.POP,
-)
-
-no_reg_with_reversed = (
-    OPCode.RET,
-    OPCode.HALT,
-    OPCode.IRET,
-    OPCode.STI,
-    OPCode.CLI,
-)
-
-no_reg_with_label = (
-    OPCode.JMPI,
-    OPCode.CALLI,
-    OPCode.LIDT,
-)
+from src.opcode import OPCode, three_reg_opcodes, two_reg_with_reversed, two_reg_with_label, single_reg_with_reversed, \
+    no_reg_with_reversed, no_reg_with_label
 
 
 class InsDumper(object):

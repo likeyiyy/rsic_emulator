@@ -5,6 +5,7 @@
     xor r0, r0, r0
     xor r1, r1, r1
     addi r0, 100
+.align 4
 loop:
     addi r1, 1
     lt r1, r0, loop

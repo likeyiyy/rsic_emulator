@@ -1,5 +1,5 @@
 
-.external
+.import
 add_to_100
 
 .align 4

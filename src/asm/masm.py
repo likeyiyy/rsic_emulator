@@ -30,7 +30,8 @@ import os
 import sys
 from typing import Dict, List, Tuple, Type, Union, Callable, Optional
 
-from src.opcode import OPCode
+from src.opcode import OPCode, three_reg_opcodes, two_reg_with_reversed, two_reg_with_label, single_reg_with_reversed, \
+    no_reg_with_reversed, no_reg_with_label
 
 VERSION = "0.0.1"
 
@@ -76,8 +77,12 @@ class PreProcessor(object):
 
 class PassOne(object):
 
+    def __init__(self):
+        self.label_maps = {}
+        self.import_labels = []
+        self.public_labels = []
+
     def process(self, file_content: str):
-        label_maps = {}
         ipc = 0
         for idx, line in enumerate(file_content.split("\n")):
             line = line.strip()
@@ -87,7 +92,6 @@ class PassOne(object):
                 
                 if line.startswith(".align"):
                     align_num = int(line.replace(".align", "").replace('"', '').strip())
-                    import ipdb;ipdb.set_trace()
                     while ipc % align_num != 0:
                         ipc += 1
                 elif line.startswith(".ascii"):
@@ -105,6 +109,16 @@ class PassOne(object):
                     if not num_str.isdigit():
                         raise Exception(f"第{idx + 1}行： .word后面跟的不是数字")
                     ipc += 4
+                elif line.startswith(".import"):
+                    labels = [_.strip() for _ in line.replace(".import", "").split(",")]
+                    for label in labels:
+                        if label in self.label_maps.keys():
+                            raise Exception(f"第{idx + 1}行： .import 导入的label和本文件中的label重名了: {label}。")
+                        else:
+                            self.import_labels.append(label)
+                elif line.startswith(".public"):
+                    labels = [_.strip() for _ in line.replace(".public", "").split(",")]
+                    self.public_labels.extend(labels)
                 continue
             elif ":" in line:
                 label = line.split(":")[0]
@@ -116,14 +130,18 @@ class PassOne(object):
                     label_maps[label] = ipc
             else:
                 ipc += 1
+
+        for label in self.public_labels:
+            if label not in self.label_maps.keys():
+                raise Exception(f"Error: 想要public的label{label}， 在本文件中没有定义")
         return label_maps
 
 # object file format simple defined here
 # 0-3字节：  magic num
-# 4-7字节：  .entry区域 文件偏移位置
-# 8-11字节： .entry区域大小
-# 12-15字节： .external区域 文件偏移位置
-# 16-19字节： .external区域大小
+# 4-7字节：  .public区域 文件偏移位置
+# 8-11字节： .public区域大小
+# 12-15字节： .import区域 文件偏移位置
+# 16-19字节： .import区域大小
 # 20-23字节： .text 文件偏移位置
 # 24-27字节： .text 大小
 # 28-31字节： .data 文件偏移位置
@@ -134,9 +152,23 @@ class PassOne(object):
 
 # .entry
 # .entry每8个字节一组，前四个字节代表符号表的位置，后四个字节代表入口地址，所以我们支持大概2^32个符号
-# .external
-# .external每8个字节一组，前四个字节代表指令地址，后面四个字节代表符号表中的偏移
+# .import
+# .import每8个字节一组，前四个字节代表指令地址，后面四个字节代表符号表中的偏移
 MAGIC_NUMBER = 0x7f454c4602010100
+
+pre_code = [
+    ".align",
+    ".text",
+    ".data",
+    ".byte",
+    ".word",
+    ".import",
+    ".public",
+    ".ascii",
+    ".asciz",
+]
+
+NOP = 0b0010_1000_0000_0000_0000_0000_0000_0000
 
 
 class PassTwo(object):
@@ -147,31 +179,40 @@ class PassTwo(object):
         self.in_data_section = False
         self.code = []
         self.data = []
+        self.public_labels = {}
+        self.import_labels = {}
+        self.strtab = []
+        self.reloc_table = []
 
     def clear_in_status(self):
         self.in_text_section = False
         self.in_data_section = False
 
-    def process(self, file_content: str, symbol_map: Dict):
+    def process(self, file_content: str, symbol_map: Dict, import_labels: List, public_labels: List):
         ipc = 0
         for idx, line in enumerate(file_content.split("\n")):
             line = line.strip()
             if line.startswith(";") or not line:
                 continue
             elif line.startswith("."):
+                if not any(code in line for code in pre_code):
+                    raise Exception(f"第{idx + 1}行： 未识别的伪指令{line}")
                 if line.startswith(".align"):
                     align_num = int(line.replace(".align", "").replace('"', '').strip())
                     while ipc % align_num != 0:
+                        self.code.append(NOP)
                         ipc += 1
                     self.clear_in_status()
                 elif line.startswith(".text"):
                     self.in_text_section = True
+                elif line.startswith(".data"):
+                    self.in_data_section = True
                 elif line.startswith(".byte"):
                     if not self.in_data_section:
                         raise Exception(f"第{idx + 1}行： .byte应该在data section")
                 elif line.startswith(".word"):
                     pass
-                elif line.startswith(".extern"):
+                elif line.startswith(".import"):
                     pass
                 elif line.startswith(".public"):
                     pass
@@ -182,7 +223,82 @@ class PassTwo(object):
             elif ":" in line:
                 continue
             else:
+                registers = None
+                opcode_and_registers = line.split(' ', 1)
+                if len(opcode_and_registers) == 2:
+                    opcode, registers = opcode_and_registers
+                else:
+                    opcode = line
+                try:
+                    opcode = OPCode(opcode.upper())
+                except:
+                    raise Exception(f"第{idx + 1}行： 不支持的opcode： {opcode}")
+                if opcode in three_reg_opcodes:
+                    rs, rt, rd = [_.strip() for _ in registers.split(",")]
+                    rs_idx = int(rs.replace("R", ""))
+                    rt_idx = int(rt.replace("R", ""))
+                    rd_idx = int(rd.replace("R", ""))
+                    instruction = opcode << 24 | rs_idx << 19 | rt_idx << 14 | rd_idx << 9 & ~0b1_1111_1111
+                    self.code.append(instruction)
+                elif opcode in two_reg_with_reversed:
+                    rs, rt = [_.strip() for _ in registers.split(",")]
+                    rs_idx = int(rs.replace("R", ""))
+                    rt_idx = int(rt.replace("R", ""))
+                    instruction = opcode << 24 | rs_idx << 19 | rt_idx << 14 & ~0b11111_1_1111_1111
+                    self.code.append(instruction)
+                elif opcode in two_reg_with_label:
+                    rs, rt, label = [_.strip() for _ in registers.split(",")]
+                    rs_idx = int(rs.replace("R", ""))
+                    rt_idx = int(rt.replace("R", ""))
+                    if label in symbol_map.keys():
+                        # 若是本系统内定义的
+                        label_idx = symbol_map.get(label)
+                        instruction = opcode << 24 | rs_idx << 19 | rt_idx << 14 & ~0b11111_1_1111_1111
+                        self.code.append(instruction)
+                        self.reloc_table.append(ipc)
+                    elif label in import_labels:
+                        # 若是外部定义的
+                        label_idx = self.get_strt_able_index(label)
+                        if ipc in self.import_labels:
+                            raise Exception(f"第{idx + 1}行： {ipc}已经占用了一个label位置")
+                        else:
+                            # 第ipc行指令引用了字符串表中label_idx位置的字符
+                            self.import_labels[ipc] = label_idx
+
+                    else:
+                        raise Exception(f"第{idx + 1}行： {label}没有在文件中定义，也没有在import中定义")
+
+
+                elif opcode in single_reg_with_reversed:
+                    return f"{OPCode(opcode).name} R{RS_INDEX}"
+                elif opcode in no_reg_with_reversed:
+                    return f"{OPCode(opcode).name}"
+                elif opcode in no_reg_with_label:
+                    NO_REG_LABEL = instruction & 0x00ff_ffff
+                    label = "0x%08x" % NO_REG_LABEL
+                    return f"{OPCode(opcode).name} {label}"
+                elif opcode == OPCode.LUI:
+                    LUI_LABEL = instruction & 0xffff
+                    label = "0x%04x" % LUI_LABEL
+                    return f"{OPCode(opcode).name} R{RS_INDEX}, {label}"
+                elif opcode == OPCode.INT:
+                    INT_NUM = instruction & 0xff
+                    return f"{OPCode(opcode).name} {INT_NUM}"
+                elif opcode == OPCode.LCR:
+                    return f"{OPCode(opcode).name} R{RS_INDEX}, CR{RT_INDEX}"
+                else:
+                    raise NotImplementedError
+                print(ipc, opcode, registers)
                 ipc += 1
+
+    def get_strt_able_index(self, label: str):
+        # 在字符串表中，则返回符号表的位置，不在符号表中，则插入，再返回位置
+        if label in self.strtab:
+            label_idx = self.strtab.index(label)
+        else:
+            self.strtab.append(label)
+            label_idx = len(self.strtab) - 1
+        return label_idx
 
 
 if __name__ == "__main__":
@@ -212,5 +328,6 @@ if __name__ == "__main__":
                 sys.exit(-1)
             content = PreProcessor().process(source_file)
             label_maps = PassOne().process(content)
+            PassTwo().process(content, label_maps)
             print(label_maps)
 

@@ -12,7 +12,7 @@
 .byte 字节
 .word 字 32位
 .align n
-.external
+.import
 .public
 .ascii "str"
 .asciz "str"

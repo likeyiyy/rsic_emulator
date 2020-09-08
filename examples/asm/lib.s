@@ -1,6 +1,10 @@
 ;加法函数: 寄存器R0 = R0 + R1
 ;乘法函数: 寄存器R0 = R0 * R1
 
+.import abc,cde
+.import efg,cdf
+
+
 .align 4
 .text
 add_handler:
