@@ -68,6 +68,7 @@ three_reg_opcodes = (
     OPCode.FDIV,
     OPCode.AND,
     OPCode.OR,
+    OPCode.XOR,
 )
 two_reg_with_reversed = (
     OPCode.NOT,
@@ -85,6 +86,10 @@ two_reg_with_label = (
     OPCode.EQ,
     OPCode.NEQ,
 )
+two_reg_with_imm = (
+    OPCode.ADDI,
+)
+
 single_reg_with_reversed = (
     OPCode.JMP,
     OPCode.CALL,
@@ -104,3 +109,7 @@ no_reg_with_label = (
     OPCode.CALLI,
     OPCode.LIDT,
 )
+
+opcode_map = {
+
+}

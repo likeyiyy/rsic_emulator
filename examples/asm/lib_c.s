@@ -1,13 +1,17 @@
 ;测试依赖
 
+
+.import print_r1
+
 .align 4
 .text
     xor r0, r0, r0
     xor r1, r1, r1
-    addi r0, 100
+    addi r0, r0, 100
 .align 4
 loop:
-    addi r1, 1
+    addi r1, r1, 1
+    calli print_r1
     lt r1, r0, loop
     halt
 
