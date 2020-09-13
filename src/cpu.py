@@ -31,6 +31,7 @@ from src.memory import Memory
 from src.opcode import OPCode
 from src.screen import Screen
 from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from src.sign_extend import SignExtend
 
 
 class CPU(object):
@@ -120,17 +121,17 @@ class CPU(object):
     def run(self):
         while True:
             instruction = self.fetch()
-            op_code = instruction >> 24
-            RS_INDEX = (instruction & 0x00ff_ffff) >> 19
-            RT_INDEX = (instruction & 0x0007_ffff) >> 14
-            RD_INDEX = (instruction & 0x0000_3fff) >> 9
-            JUMP_LABEL = instruction & 0x0000_3fff
+            op_code = instruction >> 26
+            RS_INDEX = (instruction & 0b000000_11111_11111_11111_1111_1111_111) >> 21
+            RT_INDEX = (instruction & 0b000000_00000_11111_11111_1111_1111_111) >> 16
+            RD_INDEX = (instruction & 0b000000_00000_00000_11111_1111_1111_111) >> 11
+            SHORT_IMMEDIATE_NUM = instruction & 0b000000_00000_00000_11111_1111_1111_111
+            LONG_IMMEDIATE_NUM  = instruction & 0b000000_11111_11111_11111_1111_1111_111
 
             if op_code in (OPCode.ADD, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] + self.regs[RT_INDEX]
             elif op_code in (OPCode.ADDI, ):
-                imm = instruction & 0x0007_ffff
-                self.regs[RS_INDEX] = self.regs[RS_INDEX] + imm
+                self.regs[RS_INDEX] = self.regs[RS_INDEX] + SHORT_IMMEDIATE_NUM
             elif op_code in (OPCode.SUB, ):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] - self.regs[RT_INDEX]
             elif op_code in (OPCode.MUL, ):
@@ -162,26 +163,26 @@ class CPU(object):
                 self.regs[RD_INDEX] = self.regs[RS_INDEX] >> self.regs[RT_INDEX]
             elif op_code == OPCode.LT:
                 if self.regs[RS_INDEX] < self.regs[RT_INDEX]:
-                    self.PC = JUMP_LABEL
+                    self.PC += SignExtend.extend_16bit(SHORT_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.GT:
                 if self.regs[RS_INDEX] > self.regs[RT_INDEX]:
-                    self.PC = JUMP_LABEL
+                    self.PC += SignExtend.extend_16bit(SHORT_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.LTE:
                 if self.regs[RS_INDEX] <= self.regs[RT_INDEX]:
-                    self.PC = JUMP_LABEL
+                    self.PC += SignExtend.extend_16bit(SHORT_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.GTE:
                 if self.regs[RS_INDEX] >= self.regs[RT_INDEX]:
-                    self.PC = JUMP_LABEL
+                    self.PC += SignExtend.extend_16bit(SHORT_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.EQ:
                 if self.regs[RS_INDEX] == self.regs[RT_INDEX]:
-                    self.PC = JUMP_LABEL
+                    self.PC += SignExtend.extend_16bit(SHORT_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.NEQ:
                 if self.regs[RS_INDEX] != self.regs[RT_INDEX]:
-                    self.PC = JUMP_LABEL
+                    self.PC += SignExtend.extend_16bit(SHORT_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.JMP:
                 self.PC = self.regs[RS_INDEX]
             elif op_code == OPCode.JMPI:
-                self.PC = instruction & 0x00ff_ffff
+                self.PC += SignExtend.extend_26bit(LONG_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.MOV:
                 self.regs[RT_INDEX] = self.regs[RS_INDEX]
             elif op_code == OPCode.LOAD:
@@ -190,7 +191,7 @@ class CPU(object):
                 self.memory.write8(self.regs[RT_INDEX], self.regs[RS_INDEX])
             elif op_code == OPCode.LUI:
                 imm_num = instruction & 0xffff
-                self.regs[RS_INDEX] = imm_num
+                self.regs[RS_INDEX] = imm_num << 16
             elif op_code == OPCode.CALL:
                 self.SP -= 4
                 self.memory.write32(self.SP, self.PC)
@@ -198,7 +199,7 @@ class CPU(object):
             elif op_code == OPCode.CALLI:
                 self.SP -= 4
                 self.memory.write32(self.SP, self.PC)
-                self.PC = instruction & 0x00ff_ffff
+                self.PC += SignExtend.extend_26bit(LONG_IMMEDIATE_NUM) * 4
             elif op_code == OPCode.RET:
                 self.PC = self.memory.read32(self.SP)
                 self.SP += 4
